@@ -191,16 +191,44 @@ module.exports.redirect = function (req, res) {
 	}
 }
 
+const mathjs = require('mathjs'); 
+
 module.exports.calc = function (req, res) {
-	if (req.body.eqn) {
-		res.render('app/calc', {
-			output: mathjs.eval(req.body.eqn)
-		})
-	} else {
-		res.render('app/calc', {
-			output: 'Enter a valid math string like (3+3)*2'
-		})
-	}
+    if (req.body.eqn) {
+        // Using mathjs expression parser with pre-defined whitelist
+        try {
+            const node = mathjs.parse(req.body.eqn);
+            const validFunctions = {
+                add: mathjs.add,
+                subtract: mathjs.subtract,
+                multiply: mathjs.multiply,
+                divide: mathjs.divide
+            };
+            
+            node.traverse(function (node, path, parent) {
+                if (node.isFunctionNode) {
+                    if (!validFunctions[node.fn.name]) {
+                        throw new Error('Function not allowed');
+                    }
+                }
+            });
+
+            const code = node.compile();
+            const result = code.evaluate(validFunctions);
+            res.render('app/calc', {
+                output: result
+            });
+
+        } catch (error) {
+            res.render('app/calc', {
+                output: 'Invalid input, unable to calculate.'
+            });
+        }
+    } else {
+        res.render('app/calc', {
+            output: 'Enter a valid math string like (3+3)*2'
+        });
+    }
 }
 
 module.exports.listUsersAPI = function (req, res) {
