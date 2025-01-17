@@ -34,14 +34,37 @@ sequelize
 
 var db = {};
 
+// Security configuration
+const allowedExtension = '.js';
+const basePath = path.resolve(__dirname);
+
 fs
-  .readdirSync(__dirname)
+  .readdirSync(basePath)
   .filter(function (file) {
-    return (file.indexOf(".") !== 0) && (file !== "index.js");
+    return (file.indexOf('.') !== 0) && 
+           (file !== 'index.js') && 
+           file.endsWith(allowedExtension);
   })
   .forEach(function (file) {
-    var model = sequelize.import(path.join(__dirname, file));
-    db[model.name] = model;
+    const fullPath = path.normalize(path.join(basePath, file));
+    
+    // Security check: Verify the path hasn't escaped the base directory
+    if (!fullPath.startsWith(basePath)) {
+      console.error(`Security warning: Invalid path detected: ${file}`);
+      return;
+    }
+
+    try {
+      // Modern sequelize model loading (replacing deprecated import)
+      const model = require(fullPath)(sequelize, Sequelize.DataTypes);
+      if (!model || !model.name) {
+        console.error(`Invalid model in file: ${file}`);
+        return;
+      }
+      db[model.name] = model;
+    } catch (error) {
+      console.error(`Error loading model ${file}:`, error);
+    }
   });
 
 Object.keys(db).forEach(function (modelName) {
