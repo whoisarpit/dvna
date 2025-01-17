@@ -192,15 +192,33 @@ module.exports.redirect = function (req, res) {
 }
 
 module.exports.calc = function (req, res) {
-	if (req.body.eqn) {
-		res.render('app/calc', {
-			output: mathjs.eval(req.body.eqn)
-		})
-	} else {
-		res.render('app/calc', {
-			output: 'Enter a valid math string like (3+3)*2'
-		})
-	}
+    if (req.body.eqn) {
+        try {
+            // Create a restricted evaluator with only mathematical functions
+            const result = mathjs.evaluate(req.body.eqn, {}, {
+                // Disable any JavaScript globals
+                scope: {},
+                // Only allow basic mathematical operations
+                allowedProperties: [
+                    'abs', 'ceil', 'floor', 'round', 'sign', 
+                    'sqrt', 'cube', 'exp', 'log', 'log10',
+                    'pow', 'sin', 'cos', 'tan'
+                ]
+            })
+
+            res.render('app/calc', {
+                output: result
+            })
+        } catch (error) {
+            res.render('app/calc', {
+                output: 'Invalid mathematical expression'
+            })
+        }
+    } else {
+        res.render('app/calc', {
+            output: 'Enter a valid math string like (3+3)*2'
+        })
+    }
 }
 
 module.exports.listUsersAPI = function (req, res) {
