@@ -33,6 +33,7 @@ sequelize
   })
 
 var db = {};
+var basePath = path.normalize(__dirname);
 
 fs
   .readdirSync(__dirname)
@@ -40,8 +41,13 @@ fs
     return (file.indexOf(".") !== 0) && (file !== "index.js");
   })
   .forEach(function (file) {
-    var model = sequelize.import(path.join(__dirname, file));
-    db[model.name] = model;
+    var normalizedPath = path.normalize(path.join(__dirname, file));
+    if (normalizedPath.startsWith(basePath)) {
+      var model = sequelize.import(normalizedPath);
+      db[model.name] = model;
+    } else {
+      console.log("Invalid path for model import: ", normalizedPath);
+    }
   });
 
 Object.keys(db).forEach(function (modelName) {
